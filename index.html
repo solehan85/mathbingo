@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Bingo - Belajar Matematik Sambil Bermain</title>
+    <style>
+        /* ==========================================
+           1. VARIABLE & THEME COLORS (PREMIUM UI)
+           ========================================== */
+        :root {
+            --primary-blue: #0072ff;
+            --secondary-blue: #00c6ff;
+            --primary-green: #00b09b;
+            --secondary-green: #96c93d;
+            --primary-orange: #f857a6;
+            --secondary-orange: #ff5858;
+            --primary-yellow: #f12711;
+            --secondary-yellow: #f5af19;
+            --bg-gradient: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --text-color: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Latar Belakang Animasi Canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* ==========================================
+           2. UTILITY & CONTAINERS (GLASSMORPHISM)
+           ========================================== */
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 45px rgba(0,0,0,0.3);
+            text-align: center;
+            transition: all 0.5s ease;
+            display: none;
+            position: relative;
+            z-index: 10;
+        }
+
+        .container.active {
+            display: block;
+            animation: scaleUp 0.4s ease forwards;
+        }
+
+        h1.logo {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, #ff007f, #ffaa00, #00ffaa, #00bcff);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientMove 6s ease infinite, textGlow 2s ease-in-out infinite alternate;
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #e0e0e0;
+            margin-bottom: 30px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* ==========================================
+           3. MENUS & BUTTONS
+           ========================================== */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        @media(max-width: 600px) { .menu-grid { grid-template-columns: 1fr; } }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+            border: none;
+            color: white;
+            padding: 15px 25px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 114, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 8px 25px rgba(0, 114, 255, 0.6);
+            filter: brightness(1.1);
+        }
+
+        .btn:active { transform: translateY(1px); }
+        .btn-green { background: linear-gradient(135deg, var(--primary-green), var(--secondary-green)); box-shadow: 0 4px 15px rgba(0,176,155,0.4); }
+        .btn-orange { background: linear-gradient(135deg, var(--primary-orange), var(--secondary-orange)); box-shadow: 0 4px 15px rgba(248,87,166,0.4); }
+        .btn-yellow { background: linear-gradient(135deg, var(--primary-yellow), var(--secondary-yellow)); box-shadow: 0 4px 15px rgba(241,39,17,0.4); }
+
+        /* Pilihan tahun & grid */
+        .selection-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        @media(max-width: 500px) { .selection-grid { grid-template-columns: repeat(2, 1fr); } }
+
+        /* ==========================================
+           4. GAMEPLAY UI (BINGO BOARD & STATS)
+           ========================================== */
+        .hud {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        .hud-item { display: flex; flex-direction: column; align-items: center; }
+        .hud-val { font-size: 1.2rem; font-weight: bold; color: #ffeb3b; }
+
+        .question-box {
+            background: rgba(255,255,255,0.15);
+            border-radius: 15px;
+            padding: 20px;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.3);
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            animation: pulseGlow 2s infinite;
+        }
+
+        /* Power Ups Bar */
+        .powerups-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .power-btn {
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: 2px solid transparent;
+            opacity: 0.4;
+            transition: all 0.3s;
+            pointer-events: none;
+            font-weight: bold;
+            color: white;
+        }
+        .power-btn.available { opacity: 1; pointer-events: auto; transform: scale(1.05); border-color: #fff; }
+
+        /* Bingo Grid System */
+        .bingo-board {
+            display: grid;
+            gap: 10px;
+            margin: 0 auto 25px auto;
+            max-width: 450px;
+            width: 100%;
+        }
+
+        .bingo-cell {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            aspect-ratio: 1;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: inset 0 -4px 0 rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .bingo-cell:hover { transform: translateY(-3px); filter: brightness(1.1); }
+        .bingo-cell.marked {
+            background: linear-gradient(135deg, #00b09b, #96c93d) !important;
+            color: white !important;
+            animation: popCheck 0.4s ease forwards;
+            pointer-events: none;
+        }
+        .bingo-cell.wrong { animation: shake 0.4s ease; background: #ff4d4d; color: white; }
+        .bingo-cell::after {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg); transition: 0.5s; pointer-events: none;
+        }
+        .bingo-cell:hover::after { left: 120%; }
+
+        /* ==========================================
+           5. MASCOT (ROBOT MATH)
+           ========================================== */
+        .mascot-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            background: rgba(255,255,255,0.08);
+            padding: 10px 20px;
+            border-radius: 50px;
+        }
+        .robot {
+            width: 50px; height: 50px;
+            background: radial-gradient(circle at 30% 30%, #00c6ff, #0072ff);
+            border-radius: 14px; position: relative;
+            animation: float 2s ease-in-out infinite;
+            border: 2px solid #fff;
+        }
+        .robot-eyes {
+            display: flex; gap: 8px; position: absolute; top: 15px; left: 12px;
+        }
+        .robot-eye {
+            width: 8px; height: 8px; background: #00ffaa; border-radius: 50%;
+            animation: blink 4s infinite; box-shadow: 0 0 8px #00ffaa;
+        }
+        .robot-mouth {
+            width: 16px; height: 4px; background: #fff; border-radius: 2px;
+            position: absolute; bottom: 12px; left: 17px;
+        }
+        .mascot-bubble {
+            font-style: italic; font-weight: 600; color: #00ffaa; text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        /* ==========================================
+           6. POPUPS & OVERLAYS
+           ========================================== */
+        .overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+            z-index: 100; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .overlay.active { opacity: 1; pointer-events: auto; }
+        .popup {
+            background: linear-gradient(135deg, #1f4068, #162447);
+            border: 2px solid var(--secondary-blue); padding: 30px; border-radius: 20px;
+            width: 90%; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transform: scale(0.7); transition: transform 0.3s ease;
+        }
+        .overlay.active .popup { transform: scale(1); }
+
+        /* Papan Skor Akhir & Pencapaian */
+        .stat-line { display: flex; justify-content: space-between; margin: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
+        .badge-list { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+        .badge-item { background: rgba(255,255,255,0.15); padding: 5px 10px; border-radius: 20px; font-size: 0.85rem; border: 1px solid gold; color: gold; display: flex; align-items: center; gap: 5px;}
+
+        /* Leaderboard Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; color: white; background: rgba(0,0,0,0.2); border-radius: 8px; overflow: hidden; }
+        th, td { padding: 10px; text-align: center; font-size: 0.9rem; }
+        th { background-color: rgba(255,255,255,0.1); color: #00c6ff; }
+        tr:nth-child(even) { background-color: rgba(255,255,255,0.05); }
+
+        /* ==========================================
+           7. KEYFRAMES ANIMATIONS
+           ========================================== */
+        @keyframes scaleUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        @keyframes textGlow { from { text-shadow: 0 0 10px rgba(255,255,255,0.2), 0 0 20px rgba(0,198,255,0.4); } to { text-shadow: 0 0 20px rgba(255,255,255,0.4), 0 0 40px rgba(0,198,255,0.8); } }
+        @keyframes pulseGlow { 0% { box-shadow: 0 0 10px rgba(0,198,255,0.2); } 50% { box-shadow: 0 0 25px rgba(0,198,255,0.6); } 100% { box-shadow: 0 0 10px rgba(0,198,255,0.2); } }
+        @keyframes popCheck { 0% { transform: scale(0.6); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes blink { 0%, 90%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <div id="panel-menu" class="container active">
+        <h1 class="logo">MATH BINGO</h1>
+        <p class="subtitle">Belajar Matematik Sambil Bermain</p>
+        
+        <div class="menu-grid">
+            <button class="btn btn-green" onclick="switchPanel('panel-setup')">▶ Mula Permainan</button>
+            <button class="btn" onclick="openPopup('popup-cara')">📖 Cara Bermain</button>
+            <button class="btn btn-orange" onclick="openPopup('popup-leaderboard'); showLeaderboard();">🏆 Skor Tertinggi</button>
+            <button class="btn btn-yellow" id="btn-audio" onclick="toggleMute()">🔊 Tetapan Bunyi: Aktif</button>
+            <button class="btn" style="grid-column: span 2;" onclick="openPopup('popup-tentang')">🤖 Tentang Game</button>
+        </div>
+
+        <div class="mascot-container">
+            <div class="robot"><div class="robot-eyes"><div class="robot-eye"></div><div class="robot-eye"></div></div><div class="robot-mouth"></div></div>
+            <div class="mascot-bubble" id="menu-bubble">Hai kawan! Mari uji minda bijak kamu hari ini!</div>
+        </div>
+    </div>
+
+    <div id="panel-setup" class="container">
+        <h1 class="logo" style="font-size:2.2rem;">Konfigurasi Game</h1>
+        <p class="subtitle">Sediakan tetapan permainan anda</p>
+
+        <h3 style="margin: 10px 0 5px 0; text-align: left; color:#00c6ff;">1. Pilih Tahun (KSSR)</h3>
+        <div class="selection-grid" id="year-select">
+            <button class="btn btn-setup-year target-opt" onclick="setSetup('year', 1, this)">Tahun 1</button>
+            <button class="btn btn-setup-year" onclick="setSetup('year', 2, this)">Tahun 2</button>
+            <button class="btn btn-setup-year" onclick="setSetup('year', 3, this)">Tahun 3</button>
+            <button class="btn btn-setup-year" onclick="setSetup('year', 4, this)">Tahun 4</button>
+            <button class="btn btn-setup-year" onclick="setSetup('year', 5, this)">Tahun 5</button>
+            <button class="btn btn-setup-year" onclick="setSetup('year', 6, this)">Tahun 6</button>
+        </div>
+
+        <h3 style="margin: 20px 0 5px 0; text-align: left; color:#00b09b;">2. Saiz Kad Bingo</h3>
+        <div class="selection-grid">
+            <button class="btn btn-setup-size target-opt" onclick="setSetup('size', 3, this)">3 × 3</button>
+            <button class="btn btn-setup-size" onclick="setSetup('size', 4, this)">4 × 4</button>
+            <button class="btn btn-setup-size" onclick="setSetup('size', 5, this)">5 × 5</button>
+        </div>
+
+        <h3 style="margin: 20px 0 5px 0; text-align: left; color:#ff5858;">3. Tahap Kesukaran & Masa</h3>
+        <div class="selection-grid">
+            <select id="select-diff" class="btn" style="background:#2c5364; border:1px solid #fff;">
+                <option value="easy">Mudah</option>
+                <option value="medium" selected>Sederhana</option>
+                <option value="hard">Sukar</option>
+            </select>
+            <select id="select-time" class="btn" style="background:#2c5364; border:1px solid #fff;">
+                <option value="0">Tiada Had Masa</option>
+                <option value="300" selected>5 Minit</option>
+                <option value="600">10 Minit</option>
+                <option value="900">15 Minit</option>
+            </select>
+            <input type="text" id="player-name" placeholder="Nama Anda" value="Pemain Bijak" max="12" class="btn" style="background:rgba(255,255,255,0.2); color:#fff; text-align:center;">
+        </div>
+
+        <div style="margin-top:30px; display:flex; gap:15px;">
+            <button class="btn btn-orange" style="flex:1;" onclick="switchPanel('panel-menu')">Kembali</button>
+            <button class="btn btn-green" style="flex:2;" onclick="startGame()">🚀 Sedia... Mula!</button>
+        </div>
+    </div>
+
+    <div id="panel-play" class="container" style="max-width: 650px; padding: 20px;">
+        <div class="hud">
+            <div class="hud-item"><span>Skor</span><span id="hud-score" class="hud-val">0</span></div>
+            <div class="hud-item"><span>Masa</span><span id="hud-time" class="hud-val">--:--</span></div>
+            <div class="hud-item"><span>Ketepatan</span><span id="hud-acc" class="hud-val">100%</span></div>
+            <div class="hud-item"><span>Bingo</span><span id="hud-bingo" class="hud-val" style="color:#00ffaa">0</span></div>
+        </div>
+
+        <div class="question-box" id="current-question">1 + 1 = ?</div>
+
+        <div class="powerups-container">
+            <button id="pw-hint" class="power-btn btn-green" onclick="usePowerUp('hint')">🎁 Hint</button>
+            <button id="pw-double" class="power-btn btn-orange" onclick="usePowerUp('double')">⭐ 2x Skor</button>
+            <button id="pw-freeze" class="power-btn btn-yellow" onclick="usePowerUp('freeze')">⏰ Beku</button>
+            <button id="pw-wild" class="power-btn btn-green" style="background:#0072ff" onclick="usePowerUp('wild')">💎 Wild</button>
+        </div>
+
+        <div id="bingo-grid-container" class="bingo-board"></div>
+
+        <div class="mascot-container" style="margin-top:10px;">
+            <div class="robot"><div class="robot-eyes"><div class="robot-eye"></div><div class="robot-eye"></div></div><div class="robot-mouth"></div></div>
+            <div class="mascot-bubble" id="play-bubble">Fokus kawan, jawapan ada pada papan itu!</div>
+        </div>
+    </div>
+
+    <div class="overlay" id="popup-cara" onclick="closePopup('popup-cara')">
+        <div class="popup" onclick="event.stopPropagation()">
+            <h2 style="color:#00c6ff; margin-bottom:15px;">📖 Cara Bermain Math Bingo</h2>
+            <div style="text-align:left; font-size:0.95rem; line-height:1.6; max-height:350px; overflow-y:auto; padding-right:5px;">
+                <p>1. Selesaikan persamaan matematik yang terpapar pada skrin atas.</p>
+                <p>2. Cari nombor jawapan yang betul di dalam grid / kad Bingo anda.</p>
+                <p>3. Jika betul, petak akan ditanda hijau. Jika salah, anda akan diberi amaran penalti.</p>
+                <p>4. Bentuk satu barisan penuh secara <b>Melintang, Menegak, atau Serong (Diagonal)</b> untuk menjerit <b>BINGO!</b></p>
+                <p>5. Kutip pelbagai Power-Up percuma sepanjang permainan untuk membantu anda!</p>
+            </div>
+            <button class="btn btn-green" style="margin-top:20px; width:100%;" onclick="closePopup('popup-cara')">Faham!</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="popup-tentang" onclick="closePopup('popup-tentang')">
+        <div class="popup" onclick="event.stopPropagation()">
+            <h2 style="color:#ffaa00; margin-bottom:15px;">🤖 Tentang Math Bingo</h2>
+            <p style="font-size:0.95rem; line-height:1.5; margin-bottom:15px;">
+                Dibangunkan khas sebagai medium didik hibur (*Edutainment*) yang menyelaraskan kurikulum standard Matematik KSSR Malaysia dari Tahun 1 hingga Tahun 6. Sesuai untuk meningkatkan kelajuan pengiraan digital murid.
+            </p>
+            <button class="btn" style="width:100%;" onclick="closePopup('popup-tentang')">Tutup</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="popup-leaderboard" onclick="closePopup('popup-leaderboard')">
+        <div class="popup" onclick="event.stopPropagation()" style="max-width:550px;">
+            <h2 style="color:#00ffaa; margin-bottom:10px;">🏆 Papan Kedudukan Tertinggi</h2>
+            <div style="max-height:300px; overflow-y:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nama</th>
+                            <th>Skor</th>
+                            <th>Tahun</th>
+                            <th>Tahap</th>
+                            <th>Tarikh</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                        </tbody>
+                </table>
+            </div>
+            <button class="btn btn-orange" style="margin-top:20px; width:100%;" onclick="closePopup('popup-leaderboard')">Kembali</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="popup-result">
+        <div class="popup" style="max-width:450px;">
+            <h1 id="result-title" style="font-size:2.5rem; margin-bottom:10px;">BINGO!!</h1>
+            <p id="result-msg" style="color:#00ffaa; margin-bottom:20px;">Tahniah! Anda genius matematik!</p>
+            
+            <div id="result-rating" style="font-size:2rem; color:gold; margin-bottom:15px;">⭐⭐⭐⭐⭐</div>
+            
+            <div class="stat-line"><span>Jumlah Soalan Diuji:</span><span id="res-total">0</span></div>
+            <div class="stat-line"><span>Jawapan Betul:</span><span id="res-right" style="color:#00ffaa">0</span></div>
+            <div class="stat-line"><span>Jawapan Salah:</span><span id="res-wrong" style="color:#ff4d4d">0</span></div>
+            <div class="stat-line"><span>Ketepatan Pintar:</span><span id="res-acc">0%</span></div>
+            <div class="stat-line"><span>Skor Utama:</span><span id="res-score" style="color:#ffeb3b; font-weight:bold;">0</span></div>
+            <div class="stat-line"><span>Bilangan Bingo:</span><span id="res-bingocount">0</span></div>
+
+            <h4 style="margin-top:15px; color:#00c6ff; text-align:left;">Lencana Pencapaian:</h4>
+            <div class="badge-list" id="res-badges"></div>
+
+            <div style="display:flex; gap:10px; margin-top:25px;">
+                <button class="btn btn-green" style="flex:1;" onclick="restartGame()">Main Lagi</button>
+                <button class="btn" style="flex:1;" onclick="exitToMenu()">Menu Utama</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* --- CONFIGURASI & FIREBASE INTEGRASI --- */
+        // Sedia untuk sambungan masa depan menggunakan Firebase Realtime DB
+        const firebaseConfig = {
+            apiKey: "AIzaSyBodgbX3UIKGJ3u0BI58DQH7k0Cv4rVluQ",
+            authDomain: "mathbingo-f3c5e.firebaseapp.com",
+            databaseURL: "https://mathbingo-f3c5e-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "mathbingo-f3c5e",
+            storageBucket: "mathbingo-f3c5e.firebasestorage.app",
+            messagingSenderId: "1005451966852",
+            appId: "1:1005451966852:web:e346dc0d838098743e45d1"
+        };
+
+        /* --- GLOBAL GAME STATES --- */
+        let gameConfig = { year: 1, size: 3, difficulty: 'medium', timeLimit: 300, name: 'Pemain' };
+        let gameState = {
+            score: 0, timeRemaining: 0, totalQuestions: 0, correctAnswers: 0, wrongAnswers: 0,
+            bingoCount: 0, isMuted: false, gridData: [], markedCells: [], currentAnswer: null,
+            timerId: null, isDoubleScore: false, doubleScoreTimer: 0, isFrozen: false, freezeTimer: 0,
+            isWildActive: false, achievedBadges: []
+        };
+
+        // Maskot Phrases
+        const mascotCheers = ["Hebat!", "Bagus!", "Teruskan!", "Anda hampir mendapat Bingo!", "Tahniah!", "Bijaknya kamu!", "Fokus! Anda boleh!"];
+
+        /* --- AUDIO SYNTHESIZER (WEB AUDIO API) --- */
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq, type, duration, vol=0.1) {
+            if (gameState.isMuted) return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = type; osc.frequency.value = freq;
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                osc.connect(gain); gain.connect(audioCtx.
